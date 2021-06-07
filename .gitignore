@@ -1,0 +1,5 @@
+logs/*
+images/*
+.idea/*
+*.pyc
+__pycache__/*
