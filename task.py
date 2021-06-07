@@ -1,8 +1,6 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import copy
-
-_COLORS = ['red', 'blue']
+from matplotlib import cm
 
 
 class Circle(object):
@@ -10,11 +8,12 @@ class Circle(object):
     To be used in CircleSearch task. Consists of neighborhoods of particular colors arranged in circular formation
     """
 
-    def __init__(self, n_colors, n_items, p_sizes):
+    def __init__(self, n_colors, n_items):
         self._n_colors = n_colors
         self._n_items = n_items
-        # regions = np.random.multinomial(self._n_items, p_sizes, size=1)[0]
-        regions = [int(np.ceil(p_sizes[0] * self._n_items)), self._n_items - int(np.ceil(p_sizes[0] * self._n_items))]
+        regions = np.random.multinomial(self._n_items, np.ones(self._n_colors) / self._n_colors, size=1)[0]
+        while(len(np.flatnonzero(regions == 0)) > 0):
+            regions = np.random.multinomial(self._n_items, np.ones(self._n_colors) / self._n_colors, size=1)[0]
         colors = np.arange(self._n_colors)
         np.random.shuffle(colors)
         self._circle = np.hstack([np.repeat(color, regions[color]) for color in colors])
@@ -22,14 +21,11 @@ class Circle(object):
     def __getitem__(self, theta):
         return self._circle[theta]
 
-
     def plot(self, ax):
-        if self._n_colors > 2:
-            return Exception(ValueError('Can only plot circles with two colors'))
-        ax.imshow(self._circle[:, np.newaxis].T, cmap='gray')
+        cmap = cm.get_cmap('tab10', 6)
+        ax.imshow(self._circle[:, np.newaxis].T / self._n_colors, cmap=cmap, interpolation='nearest', aspect='auto')
         ax.set_xlabel('$\\theta$')
         ax.set_yticks([])
-
 
     def rotate(self, theta):
         self._circle = np.roll(self._circle, theta)
@@ -45,7 +41,7 @@ class CircleSearch(object):
     response is selection (saccade to) region on occluded outer ring matching target color.
     """
 
-    def __init__(self, n_colors, n_items, n_attempts, p_large):
+    def __init__(self, n_colors, n_items, n_attempts):
         """Constructor.
         Args:
             n_colors: Number of distinct colors present in circle
@@ -57,7 +53,7 @@ class CircleSearch(object):
         self._n_items = n_items
         self._n_attempts = n_attempts
         self._attempts = 0
-        self._map_circle = Circle(n_colors=self._n_colors, n_items=self._n_items, p_sizes=[p_large, 1-p_large])
+        self._map_circle = Circle(n_colors=self._n_colors, n_items=self._n_items)
         self._occ_circle = copy.copy(self._map_circle)
         self._occ_circle.rotate(np.random.randint(low=0, high=self._n_items - 1))
         self._target_color = np.random.choice(self._n_colors, size=1)[0]
@@ -96,14 +92,24 @@ class Driver(object):
             model_resp = model()
             theta = model_resp['theta']
             trial_over = False
+            # print(f'NEW TRIAL {trial}')
             while not trial_over:
                 trial_dict['theta'].append(theta)
                 trial_dict['posterior'].append(model_resp['posterior'])
                 trial_dict['n_attempts'] += 1
                 trial_over, task_resp = task(theta)
+                # print('circle')
+                # print(trial_dict['occ_circle']._circle)
+                # print('attempts')
+                # print(trial_dict['n_attempts'])
+                # print('target_color')
+                # print(trial_dict['target_color'])
+                # print('color')
+                # print(task_resp['color'])
+                # print('theta')
+                # print(theta)
                 if not trial_over:
                     model_resp = model(**task_resp)
                     theta = model_resp['theta']
             trials.append(trial_dict)
         return trials
-

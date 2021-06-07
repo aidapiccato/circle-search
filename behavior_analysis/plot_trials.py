@@ -19,7 +19,7 @@ def plot_attempts(trials):
     """Plots attempts as a function of ratio"""
     trials = trials.copy()
     trials['r_color'] = trials['n_target']/trials['n_items']
-    fig, ax = plt.subplots(1, 3, figsize=(3 * 3, 4))
+    fig, ax = plt.subplots(1, 4, figsize=(3 * 4, 4))
 
     ax[0].hist(trials['n_attempts'])
     ax[0].set_xlabel('no. of attempts')
@@ -32,6 +32,10 @@ def plot_attempts(trials):
     ax[1].plot(trials.groupby('n_items')['n_attempts'].mean())
     ax[1].set_xlabel('no. of items')
     ax[1].set_ylabel('no. of attempts')
+
+    ax[3].plot(trials.groupby('n_colors')['n_attempts'].mean())
+    ax[3].set_xlabel('no. of colors')
+    ax[3].set_ylabel('no. of attempts')
 
     plt.tight_layout()
     return fig

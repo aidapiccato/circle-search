@@ -18,22 +18,29 @@ class IdealObserver():
         self._n_items = self._map_circle._n_items
         self._n_colors = self._map_circle._n_colors
         self._prior = np.ones(self._n_items) / self._n_items
+        self._color_len = [len(np.where(self._map_circle._circle == c)[0]) for c in range(self._n_colors)]
         non_target_color = np.arange(self._n_colors)
         non_target_color = non_target_color[non_target_color != self._target_color]
         self._n_s = len(np.where(self._map_circle._circle == non_target_color)[0])
         self._n_t = self._n_items - self._n_s
 
-    # def _likelihood_source(self, theta, color):
-    #     offsets = np.arange(1, self._n_items)
-
     def _likelihood_target(self, theta, color):
-        offsets = np.arange(1, self._n_items)
-        inside_source = np.maximum(0, self._n_s + offsets - self._n_items)
-        outside_target = np.maximum(0, self._n_s - offsets)
-        likelihood = (self._n_s - inside_source - outside_target) / self._n_s
-        likelihood = np.hstack(([0], likelihood))
-        likelihood = np.roll(likelihood, theta)
-        return likelihood
+        posterior = np.zeros(self._n_items)
+        start_source = np.where(self._map_circle._circle == color)[0][0]
+        offset = theta - start_source
+        for rot in range(self._color_len[color]):
+            rot_circle = np.roll(self._map_circle._circle, offset - rot)
+            rot_circle_target = rot_circle == self._target_color
+            posterior += rot_circle_target
+        return posterior/self._color_len[color]
+
+        # offsets = np.arange(1, self._n_items)
+        # inside_source = np.maximum(0, self._n_s + offsets - self._n_items)
+        # outside_target = np.maximum(0, self._n_s - offsets)
+        # likelihood = (self._n_s - inside_source - outside_target) / self._n_s
+        # likelihood = np.hstack(([0], likelihood))
+        # likelihood = np.roll(likelihood, theta)
+        # return likelihood
 
     def _decision(self, posterior):
         return np.random.choice(np.flatnonzero(posterior == posterior.max()))
@@ -43,10 +50,13 @@ class IdealObserver():
             return {'theta': np.random.randint(self._n_items, size=1)[0], 'posterior': self._prior}
         else:
             likelihood_target = self._likelihood_target(theta, color)
-            # if self._target_color == 0:
-            #     likelihood_target = 1 - likelihood_target
             posterior = likelihood_target * self._prior
+            # import pdb; pdb.set_trace()
+            # print(likelihood_target, posterior, self._prior)
+            # if np.sum(posterior) == 0:
+            #     import pdb; pdb.set_trace()
             posterior = posterior/np.sum(posterior)
+
             self._prior = posterior
             return {'theta': self._decision(posterior), 'posterior': posterior}
 

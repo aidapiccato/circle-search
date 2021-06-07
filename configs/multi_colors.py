@@ -13,13 +13,12 @@ def get_config():
 
         'constructor': task.Driver,
         'kwargs': {
-            'n_trials': 50,
+            'n_trials': 100,
             'task_constructor':  task.CircleSearch,
             'task_kwargs': {
-                    'n_colors': 2,
+                    'n_colors': 3,
                     'n_items': 8,
                     'n_attempts': 10,
-                    'p_large': 0.5
             },
             'model_constructor': models.IdealObserver,
         },

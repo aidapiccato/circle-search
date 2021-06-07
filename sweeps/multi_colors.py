@@ -13,14 +13,14 @@ script.
 import numpy as np
 from python_utils.configs import sweep
 
-_CONFIG_NAME = 'configs.two_colors'
+_CONFIG_NAME = 'configs.multi_colors'
 
 
 def _get_param_sweep():
     """Return the sweep we want to launch."""
     param_sweep = sweep.product(
-        sweep.discrete(('kwargs', 'task_kwargs', 'n_items'), [2, 4, 8, 16, 32, 64]),
-        sweep.discrete(('kwargs', 'task_kwargs', 'p_large'), [0.1, 0.2, 0.3, 0.4, 0.5])
+        sweep.discrete(('kwargs', 'task_kwargs', 'n_colors'), [2, 3, 4, 6]),
+        sweep.discrete(('kwargs', 'task_kwargs', 'n_items'), [8, 16, 32, 64, 128]),
     )
     return param_sweep
 

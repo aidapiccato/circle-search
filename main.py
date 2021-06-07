@@ -17,7 +17,6 @@ import pickle
 from python_utils.configs import build_from_config
 from python_utils.configs import override_config
 
-from task import plot_trials
 
 FLAGS = flags.FLAGS
 flags.DEFINE_string('config', 'configs.circle_search',
