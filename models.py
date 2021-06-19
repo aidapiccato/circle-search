@@ -15,21 +15,21 @@ class IdealObserver():
     def __init__(self, map_circle, target_color):
         self._map_circle = map_circle
         self._target_color = target_color
-        self._n_items = self._map_circle._n_items
-        self._n_colors = self._map_circle._n_colors
+        self._n_items = len(map_circle)
+        self._n_colors = len(np.unique(map_circle))
         self._prior = np.ones(self._n_items) / self._n_items
-        self._color_len = [len(np.where(self._map_circle._circle == c)[0]) for c in range(self._n_colors)]
+        self._color_len = [len(np.where(self._map_circle == c)[0]) for c in range(self._n_colors)]
         non_target_color = np.arange(self._n_colors)
         non_target_color = non_target_color[non_target_color != self._target_color]
-        self._n_s = len(np.where(self._map_circle._circle == non_target_color)[0])
+        self._n_s = len(np.where(self._map_circle == non_target_color)[0])
         self._n_t = self._n_items - self._n_s
 
     def _likelihood_target(self, theta, color):
         posterior = np.zeros(self._n_items)
-        start_source = np.where(self._map_circle._circle == color)[0][0]
+        start_source = np.where(self._map_circle == color)[0][0]
         offset = theta - start_source
         for rot in range(self._color_len[color]):
-            rot_circle = np.roll(self._map_circle._circle, offset - rot)
+            rot_circle = np.roll(self._map_circle, offset - rot)
             rot_circle_target = rot_circle == self._target_color
             posterior += rot_circle_target
         return posterior/self._color_len[color]
@@ -51,10 +51,6 @@ class IdealObserver():
         else:
             likelihood_target = self._likelihood_target(theta, color)
             posterior = likelihood_target * self._prior
-            # import pdb; pdb.set_trace()
-            # print(likelihood_target, posterior, self._prior)
-            # if np.sum(posterior) == 0:
-            #     import pdb; pdb.set_trace()
             posterior = posterior/np.sum(posterior)
 
             self._prior = posterior

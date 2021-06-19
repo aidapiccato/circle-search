@@ -19,8 +19,10 @@ _CONFIG_NAME = 'configs.multi_colors'
 def _get_param_sweep():
     """Return the sweep we want to launch."""
     param_sweep = sweep.product(
-        sweep.discrete(('kwargs', 'task_kwargs', 'n_colors'), [2, 3, 4, 6]),
-        sweep.discrete(('kwargs', 'task_kwargs', 'n_items'), [8, 16, 32, 64, 128]),
+        sweep.discrete(('kwargs', 'task_kwargs', 'n_colors'), [2, 3]),
+        sweep.discrete(('kwargs', 'task_kwargs', 'frac_target'), [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9,
+                                                                  1.0]),
+        sweep.discrete(('kwargs', 'task_kwargs', 'n_items'), [16, 32, 64, 128, 256]),
     )
     return param_sweep
 

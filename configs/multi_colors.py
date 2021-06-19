@@ -6,6 +6,7 @@ python_utils.build_from_config.build_from_config().
 
 import task
 import models
+import numpy as np
 
 def get_config():
     """Get config for main.py."""
@@ -16,9 +17,10 @@ def get_config():
             'n_trials': 100,
             'task_constructor':  task.CircleSearch,
             'task_kwargs': {
-                    'n_colors': 3,
+                    'n_colors': 2,
                     'n_items': 8,
-                    'n_attempts': 10,
+                    'frac_target': 0.25,
+                    'n_attempts': np.inf,
             },
             'model_constructor': models.IdealObserver,
         },

@@ -13,14 +13,16 @@ import importlib
 from utils.analysis import get_trials, get_trials_dataframe
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('analysis_module', 'behavior_analysis.plot_trials',
+flags.DEFINE_string('analysis_module', 'behavior_analysis.analysis', 'Name of behavioral analysis module containing '
+                                                                      'functions to apply to dataframe')
+flags.DEFINE_string('analysis_function', 'get_features', 'Name of functions in analysis module to carry out')
+flags.DEFINE_string('plot_module', 'behavior_analysis.plot_trials',
                     'Name of behavioral analysis module containing functions to carry out')
-flags.DEFINE_list('analysis_functions', '', 'Name of functions in module to carry out ')
+flags.DEFINE_list('plot_functions', '', 'Name of functions in module to carry out ')
 flags.DEFINE_string(
     'trials_directory', 'logs',
     'Directory to recursively search for output files')
 flags.DEFINE_string('output_filter', 'output', 'Filter used to select output data files')
-
 def main(_):
 
     ############################################################################
@@ -34,8 +36,17 @@ def main(_):
     ############################################################################
 
     mod = importlib.import_module(FLAGS.analysis_module)
+    func = getattr(mod, FLAGS.analysis_function)
+    trials = func(trials)
 
-    for func_str in FLAGS.analysis_functions:
+    ############################################################################
+    # Loading and running plotting functions
+    ############################################################################
+
+    mod = importlib.import_module(FLAGS.plot_module)
+
+
+    for func_str in FLAGS.plot_functions:
         func = getattr(mod, func_str)
         fig = func(trials)
         fig.savefig(f'images/analysis/{func_str}')
