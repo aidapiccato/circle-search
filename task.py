@@ -8,7 +8,8 @@ class CircleSearch(object):
     response is selection (saccade to) region on occluded outer ring matching target color.
     """
 
-    def __init__(self, n_colors, n_items, n_attempts, frac_target=None, map_circle=None, occ_circle=None,
+    def __init__(self, n_colors, n_items, n_attempts, n_regions=None, frac_target=None, map_circle=None,
+                 occ_circle=None,
                  target_color=None):
         """Constructor.
         Args:
@@ -21,6 +22,13 @@ class CircleSearch(object):
         self._n_items = n_items
         self._n_attempts = n_attempts
         self._attempts = 0
+
+        if n_regions is None:
+            self._n_regions = self._n_colors
+        else:
+            if self._n_colors == 2:
+                n_regions = 2
+            self._n_regions = n_regions
 
         if target_color is None:
             self._target_color = np.random.randint(low=0, high=self._n_colors, size=1)
@@ -44,33 +52,49 @@ class CircleSearch(object):
             while not np.roll(self._map_circle, rot) == self._occ_circle:
                 rot += 1
             self._rot = rot
+        self._n_target = len(np.flatnonzero(self._map_circle == self._target_color))
         self._model_args = {'map_circle': self._map_circle, 'target_color': self._target_color}
 
     def _generate_circle(self):
-
         n_target = np.maximum(1, np.minimum(np.ceil(self._frac_target * self._n_items), self._n_items - (
-                self._n_colors - 1)))  #
-        # size of target region.
-        # constrained such that there is enough space remaining in circle for all other colors to have at least one
-        # sprite
-        p_colors = np.ones(self._n_colors - 1) / (self._n_colors - 1)
-        n_others = np.random.multinomial(self._n_items - n_target, p_colors)
-        while len(np.flatnonzero(n_others == 0)) > 0:
-            n_others = np.random.multinomial(self._n_items - n_target, p_colors)
-        regions = np.zeros(self._n_colors)
-        regions[np.arange(self._n_colors) != self._target_color] = n_others
-        regions[self._target_color] = n_target
-        colors = np.arange(self._n_colors)
-        np.random.shuffle(colors)
-        return np.hstack([np.repeat(color, regions[color]) for color in colors])
+                self._n_regions - 1)))  #
+        # size of target region is constrained such that there is enough space remaining in circle for all other colors
+        # to have at least one sprite
+        n_other_regions = self._n_regions - 1
+        p_regions = np.ones(n_other_regions) / (n_other_regions)
+        n_others = np.random.multinomial(self._n_items - n_target, p_regions)
+        other_colors = list(set(np.arange(self._n_colors)) - {self._target_color[0]})
+        region_colors = np.zeros(n_other_regions)
+        if self._n_regions > self._n_colors:
+            while len(np.unique(region_colors)) < self._n_colors - 1:
+                region_colors[0] = np.random.choice(other_colors)
+                for reg in range(1, self._n_regions - 1):
+                    region_colors[reg] = np.random.choice(list(set(other_colors) - {region_colors[reg - 1]}))
+        else:
+            region_colors = other_colors
+            np.random.shuffle(region_colors)
+
+        # inserting target color
+        # region_target = np.random.choice(self._n_regions)
+        # region_colors = np.insert(region_colors, obj=region_target, values=self._target_color)
+        # region_sizes = np.insert(n_others, obj=region_target, values=n_target)
+        region_colors = np.append(region_colors, self._target_color)
+        region_sizes = np.append(n_others, n_target)
+
+        circle = np.hstack([np.repeat(region_colors[region], region_sizes[region]) for region in np.arange(self._n_regions)])
+
+        circle = circle.astype(int)
+        rot = np.random.randint(low=0, high=self._n_items - 1)
+
+        return np.roll(circle, rot)
 
     def model_args(self):
         return self._model_args
 
     def task_dict(self):
         return {'map_circle': self._map_circle, 'occ_circle': self._occ_circle, 'target_color': self._target_color,
-                'n_items': self._n_items, 'frac_target': self._frac_target,
-                'n_colors': self._n_colors, 'rot': self._rot, 'n_attempts': self._n_attempts}
+                'n_items': self._n_items, 'frac_target': self._frac_target, 'n_target': self._n_target,
+                'n_colors': self._n_colors, 'rot': self._rot, 'n_attempts': self._n_attempts, 'n_regions': self._n_regions}
 
     def __call__(self, theta):
         color = self._occ_circle[theta]
@@ -110,5 +134,4 @@ class Driver(object):
 
 
 if __name__ == '__main__':
-    t = CircleSearch(2, 16, np.inf, frac_target=0.1)
-    print(t)
+    t = CircleSearch(3, 16, np.inf, frac_target=0.1, n_regions=4)

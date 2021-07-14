@@ -26,24 +26,16 @@ class IdealObserver():
 
     def _likelihood_target(self, theta, color):
         posterior = np.zeros(self._n_items)
-        start_source = np.where(self._map_circle == color)[0][0]
-        offset = theta - start_source
-        for rot in range(self._color_len[color]):
-            rot_circle = np.roll(self._map_circle, offset - rot)
-            rot_circle_target = rot_circle == self._target_color
-            posterior += rot_circle_target
-        return posterior/self._color_len[color]
-
-        # offsets = np.arange(1, self._n_items)
-        # inside_source = np.maximum(0, self._n_s + offsets - self._n_items)
-        # outside_target = np.maximum(0, self._n_s - offsets)
-        # likelihood = (self._n_s - inside_source - outside_target) / self._n_s
-        # likelihood = np.hstack(([0], likelihood))
-        # likelihood = np.roll(likelihood, theta)
-        # return likelihood
+        for rot in range(1, self._n_items):
+            rot_circle = np.roll(self._map_circle, rot)
+            if rot_circle[theta] == color:
+                rot_circle_target = rot_circle == self._target_color
+                posterior += rot_circle_target
+        return posterior/self._n_items
 
     def _decision(self, posterior):
-        return np.random.choice(np.flatnonzero(posterior == posterior.max()))
+        choice = np.random.choice(np.flatnonzero(posterior == posterior.max()))
+        return choice
 
     def __call__(self, theta=None, color=None):
         if theta is None and color is None:
@@ -52,7 +44,6 @@ class IdealObserver():
             likelihood_target = self._likelihood_target(theta, color)
             posterior = likelihood_target * self._prior
             posterior = posterior/np.sum(posterior)
-
             self._prior = posterior
             return {'theta': self._decision(posterior), 'posterior': posterior}
 
