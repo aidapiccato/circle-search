@@ -1,6 +1,174 @@
 import numpy as np
 import copy
 
+COLORS = 0
+LOCS = 1
+MIN_CIRCLE_SIZE = np.pi / 8
+
+
+class CircleSearchAmbiguousFlat(object):
+    def __init__(self, n_colors, n_attempts=np.inf, target_color=None, n_items=None):
+        self._n_colors = n_colors
+        self._n_attempts = n_attempts
+        self._attempts = 0
+
+        if target_color is None:
+            self._target_color = np.random.randint(low=0, high=self._n_colors, size=1)
+        else:
+            self._target_color = target_color
+
+        if n_items is None:
+            self._n_items = np.random.randint(low=1, high=self._n_colors + 1)
+        else:
+            self._n_items = n_items
+
+        self._angles = np.maximum(np.random.uniform(low=0, high=np.pi, size=self._n_items - 1), MIN_CIRCLE_SIZE)
+
+        self._map_circle = self._generate_circle()
+        self._occ_circle = copy.copy(self._map_circle)
+        self._rot = np.random.uniform(low=0, high=np.pi)
+
+        self._occ_circle[LOCS] = (self._occ_circle[LOCS] + self._rot) % (2 * np.pi)
+
+    def _generate_circle(self):
+        """
+        Generates a circle with flat structured clusters.
+        :return:
+        """
+        item_locs = np.zeros(shape=(1))
+
+        item_locs = np.append(item_locs, self._angles)
+
+        item_locs = np.cumsum(item_locs) % (2 * np.pi)
+
+        rot = np.random.uniform(low=0, high=np.pi)
+
+        item_locs = (item_locs + rot) % (2 * np.pi)
+
+        # Determining color of items
+        item_colors = []
+
+        for item in range(self._n_items - 1):
+            col = np.random.randint(low=0, high=self._n_colors)
+            while col == self._target_color:
+                col = np.random.randint(low=0, high=self._n_colors)
+            item_colors.append(col)
+
+        item_colors.append(self._target_color[0])
+
+        np.random.shuffle(item_colors)
+
+        item_colors = np.asarray(item_colors).astype(int)
+
+        return np.vstack((item_colors, item_locs))
+
+    def __call__(self, theta):
+        color = self._occ_circle[COLORS][theta]
+        self._attempts += 1
+        trial_over = self._attempts > self._n_attempts or color == self._target_color
+        resp = {'theta': theta, 'color': color}
+        return trial_over, resp
+
+    def model_args(self):
+        return {'map_circle': self._map_circle, 'target_color': self._target_color}
+
+    def task_dict(self):
+        return {'map_circle': self._map_circle, 'occ_circle': self._occ_circle, 'target_color': self._target_color,
+                'n_items': self._n_items, 'n_colors': self._n_colors, 'rot': self._rot, 'n_attempts':
+                    self._n_attempts}
+
+class CircleSearchAmbiguousClust(object):
+    """
+    A modified version of circle search task with a limited number of clustered circles. There is a single target
+    item, all others are sampled with replacement
+    """
+
+    def __init__(self, n_colors, n_attempts=np.inf, target_color=None, n_items=None, n_clusters=None):
+        self._n_colors = n_colors
+        self._n_attempts = n_attempts
+        self._attempts = 0
+
+        if n_items is None:
+            self._n_items = np.random.randint(low=n_colors, high=self._n_colors + 2)[0]
+        else:
+            self._n_items = n_items
+
+        if target_color is None:
+            self._target_color = np.random.randint(low=0, high=self._n_colors, size=1)
+        else:
+            self._target_color = target_color
+        if n_clusters is None:
+            self._n_clusters = np.random.randint(low=1, high=self._n_items + 1, size=1)[0]
+        else:
+            self._n_clusters = n_clusters
+
+        self._map_circle = self._generate_circle()
+        self._occ_circle = copy.copy(self._map_circle)
+        self._rot = np.random.uniform(low=0, high=2 * np.pi)
+
+        self._occ_circle[LOCS] = (self._occ_circle[LOCS] + self._rot) % (2 * np.pi)
+
+        # TODO: Add functionality to pass in a ready-made circle
+
+    def _generate_circle(self):
+        """
+        Generates a circle with hierarchically structured clusters.
+        :return:
+        """
+
+        # Determines size of clusters (number of fruits)
+        cluster_sizes = np.zeros(self._n_clusters)
+
+        for clust in range(self._n_clusters - 1):
+            cluster_sizes[clust] = np.random.randint(low=1, high=self._n_items - cluster_sizes.sum() -
+                                                                 (self._n_clusters - clust - 1) + 1, size=1)[0]
+        cluster_sizes[-1] = self._n_items - cluster_sizes.sum()
+
+        np.random.shuffle(cluster_sizes)
+
+        # Determine spacing of clusters
+        item_locs = []
+        #
+        clust_size = 2 * np.pi / self._n_clusters
+        for clust in range(self._n_clusters):
+            clust_start = clust_size * clust
+            clust_center = clust_size / 2 + clust_size * clust
+            fruit_size = clust_size / cluster_sizes[clust]
+            for item in range(int(cluster_sizes[clust])):
+                item_locs.append(item * fruit_size / 2 + clust_start)
+
+        # Determining color of items
+        item_colors = []
+
+        for item in range(self._n_items - 1):
+            col = np.random.randint(low=0, high=self._n_colors)
+            while col == self._target_color:
+                col = np.random.randint(low=0, high=self._n_colors)
+            item_colors.append(col)
+
+        item_colors.append(self._target_color[0])
+
+        np.random.shuffle(item_colors)
+
+        item_colors = np.asarray(item_colors).astype(int)
+
+        return np.vstack((item_colors, item_locs))
+
+    def __call__(self, theta):
+        color = self._occ_circle[COLORS][theta]
+        self._attempts += 1
+        trial_over = self._attempts > self._n_attempts or color == self._target_color
+        resp = {'theta': theta, 'color': color}
+        return trial_over, resp
+
+    def model_args(self):
+        return {'map_circle': self._map_circle, 'target_color': self._target_color}
+
+    def task_dict(self):
+        return {'map_circle': self._map_circle, 'occ_circle': self._occ_circle, 'target_color': self._target_color,
+                'n_items': self._n_items, 'n_colors': self._n_colors, 'rot': self._rot, 'n_attempts':
+                    self._n_attempts, 'n_clusters': self._n_clusters}
+
 
 class CircleSearch(object):
     """Circle Search task.
@@ -74,14 +242,11 @@ class CircleSearch(object):
             region_colors = other_colors
             np.random.shuffle(region_colors)
 
-        # inserting target color
-        # region_target = np.random.choice(self._n_regions)
-        # region_colors = np.insert(region_colors, obj=region_target, values=self._target_color)
-        # region_sizes = np.insert(n_others, obj=region_target, values=n_target)
         region_colors = np.append(region_colors, self._target_color)
         region_sizes = np.append(n_others, n_target)
 
-        circle = np.hstack([np.repeat(region_colors[region], region_sizes[region]) for region in np.arange(self._n_regions)])
+        circle = np.hstack(
+            [np.repeat(region_colors[region], region_sizes[region]) for region in np.arange(self._n_regions)])
 
         circle = circle.astype(int)
         rot = np.random.randint(low=0, high=self._n_items - 1)
@@ -94,7 +259,8 @@ class CircleSearch(object):
     def task_dict(self):
         return {'map_circle': self._map_circle, 'occ_circle': self._occ_circle, 'target_color': self._target_color,
                 'n_items': self._n_items, 'frac_target': self._frac_target, 'n_target': self._n_target,
-                'n_colors': self._n_colors, 'rot': self._rot, 'n_attempts': self._n_attempts, 'n_regions': self._n_regions}
+                'n_colors': self._n_colors, 'rot': self._rot, 'n_attempts': self._n_attempts,
+                'n_regions': self._n_regions}
 
     def __call__(self, theta):
         color = self._occ_circle[theta]
@@ -134,4 +300,4 @@ class Driver(object):
 
 
 if __name__ == '__main__':
-    t = CircleSearch(3, 16, np.inf, frac_target=0.1, n_regions=4)
+    t = CircleSearchAmbiguousFlat(n_colors=4, n_items=4)

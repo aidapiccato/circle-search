@@ -22,17 +22,17 @@ def get_features(trials):
         sizes = []
         rem_attempts = []
         for idx, attempt in enumerate(trial['theta']):
-            sizes.append(len(np.flatnonzero(trial['map_circle'] == trial['map_circle'][attempt])))
+            sizes.append(len(np.flatnonzero(trial['map_circle'][0] == trial['map_circle'][0][attempt])))
             rem_attempts.append(trial['n_attempts'] - idx - 1)
         remaining_attempts.append(rem_attempts)
         source_size.append(sizes)
-        target_start = (np.flatnonzero(trial['map_circle'] == trial['target_color'])[0] + trial['rot']) % trial[
+        target_start = (np.flatnonzero(trial['map_circle'][0] == trial['target_color'])[0] + trial['rot']) % trial[
             'n_items']
         color_dist = []
         other_colors.append(np.arange(trial['n_colors'])[np.flatnonzero(np.arange(trial['n_colors']) != trial[
             'target_color'])])
         for color in range(trial['n_colors']):
-            color_dist.append(len(np.flatnonzero(trial['occ_circle'] == color)))
+            color_dist.append(len(np.flatnonzero(trial['occ_circle'][0] == color)))
         post_entropies = []
         if add_posterior:
             for p in trial['posterior']:
@@ -44,11 +44,13 @@ def get_features(trials):
         color_dists.append(color_dist)
         dist_theta.append(np.diff(trial['theta']))
         com_target.append(target_com)
-        multi_region.append(trial['n_regions'] > trial['n_colors'])
+        if 'n_regions' in trials.columns:
+            multi_region.append(trial['n_regions'] > trial['n_colors'])
         entropies.append(entropy(color_dist))
         posterior_entropies.append(post_entropies)
         dist_target.append(trial['theta'] - com_target[-1])
-    trials['multi_region'] = multi_region
+    if 'n_regions' in trials.columns:
+        trials['multi_region'] = multi_region
     trials['com_target'] = com_target
     trials['remaining_attempts'] = remaining_attempts
     trials['color_entropy'] = entropies

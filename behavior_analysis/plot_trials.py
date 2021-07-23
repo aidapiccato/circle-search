@@ -95,8 +95,8 @@ def plot_attempts(trials):
 
 def plot_trial(axs, trial):
     theta = np.linspace(0, 2 * np.pi, endpoint=False, num=trial['n_items'])
-    occ_circle = trial['occ_circle']
-    map_circle = trial['map_circle']
+    occ_circle = trial['occ_circle'][0]
+    map_circle = trial['map_circle'][0]
     target_start = (np.flatnonzero(map_circle == trial['target_color'])[0] + trial['rot']) % trial['n_items']
     target_com = (target_start + (trial['n_target'] - 1) / 2) % trial['n_items']
     theta = theta - target_com * 2 * np.pi / trial['n_items']
